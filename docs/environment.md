@@ -34,10 +34,12 @@ System modeling environment: Innoslate
 
 ## Development assistants
 
-- Gengrui Jiang (`gj248-arch`): Codex, used for the documentation and model/code
-  alignment recorded in [the prompt log](prompt-log.md). The assistant model
-  identifier was not recorded.
-- The original team environment record listed ChatGPT without naming its
-  individual users or model identifiers.
-- Other members' individual assistant usage is not documented in this public
-  record.
+- Zhengxu AN (anzhengxu): Gemini for framework and operational-logic discussions;
+  personally wrote the initial draft.
+- wanhaoyu: AI assistance during revision, with personal review as the main basis
+  for changes. The specific tool was not recorded.
+- Gengrui Jiang (jgr / `gj248-arch`): ChatGPT for diagrams and model/report
+  refinement; Codex for repository preparation and consistency checks.
+
+Exact model versions and the other two members' AI usage were not recorded.
+See [the prompt log](prompt-log.md) for the concise team summary and human review.
