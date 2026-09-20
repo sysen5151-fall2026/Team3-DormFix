@@ -91,13 +91,14 @@ followed by a separate submit call represents review and confirmation.
 The increment has no real model call, persistence, authentication, confirmation
 validation, error handling, retries, or logging.
 
-## Human review status and remaining provenance
+## Team AI use and human review summary — September 20, 2026
 
-The team reports that human review of the existing Chapter 1–2 project is
-complete, with no major content changes requested. The reviewer's name and
-review date were not supplied. The new official-repository import pull request
-still requires approval from another team member before merging.
+| Team member | AI assistance and human contribution |
+|---|---|
+| Zhengxu AN (anzhengxu) | Discussed the project framework and operational logic with Gemini, then personally wrote the initial draft. |
+| wanhaoyu | Used AI assistance during revision, while primarily relying on personal review and judgment to revise the draft. The specific AI tool was not recorded. |
+| Gengrui Jiang (jgr) | Used ChatGPT for diagram development and overall model/report refinement, and Codex assistance for repository preparation and consistency checks. Directed the changes and confirmed team decisions. |
 
-This public log contains usage summaries. Complete prompt references,
-unrecorded model identifiers, and individual generation/review details remain
-provenance gaps; they have not been reconstructed or assigned to team members.
+The team reports that it reviewed the overall content and requested no major changes. On September 20, 2026, Door424hulking formally approved [official repository PR #1](https://github.com/sysen5151-fall2026/Team3-DormFix/pull/1), which was subsequently merged by gj248-arch. AI checks supported this work alongside human review.
+
+This is a retrospective summary based on team recollection and the GitHub review record. Early session dates, exact model versions, and original prompt records are incomplete; those gaps are acknowledged rather than reconstructed. AI-use details for the other two team members have not been confirmed.
