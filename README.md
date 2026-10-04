@@ -31,3 +31,22 @@ for the output of the fixed example.
 Make changes on a branch and open a pull request targeting `main`.
 Obtain approval from at least one other team member before merging the pull request.
 Each team member must make at least one commit personally.
+
+
+## Chapter 3 specification and acceptance obligations
+
+[SPEC.md](SPEC.md) transcribes the supplied needs/requirements baseline and
+records the data and model response contracts. With Python 3.12, run:
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+Expected for this increment: **15 deliberate failures**, one per need. These are
+Chapter 3 unimplemented acceptance obligations, not executed validation results.
+SN.12/SR.34 remains Later and its test explicitly reports the missing approved
+criterion. GitHub Actions runs this command automatically on pushes and PRs.
+Later implementation work replaces each placeholder with a meaningful check;
+do not suppress failures or claim the requirements are already satisfied.
+The current canned application remains unchanged. See SPEC.md for unresolved
+policy choices and [the preparation record](docs/chapter3-preparation.md) for provenance.
