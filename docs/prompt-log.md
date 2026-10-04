@@ -102,3 +102,11 @@ validation, error handling, retries, or logging.
 The team reports that it reviewed the overall content and requested no major changes. On September 20, 2026, Door424hulking formally approved [official repository PR #1](https://github.com/sysen5151-fall2026/Team3-DormFix/pull/1), which was subsequently merged by gj248-arch. AI checks supported this work alongside human review.
 
 This is a retrospective summary based on team recollection and the GitHub review record. Early session dates, exact model versions, and original prompt records are incomplete; those gaps are acknowledged rather than reconstructed. AI-use details for the other two team members have not been confirmed.
+
+
+## 2026-10-04 — Chapter 3 preparation
+
+User-requested Codex preparation and automated checks are recorded in
+[chapter3-preparation.md](chapter3-preparation.md). This is an automated
+provenance entry; independent team review remains pending. The team should
+record its own review and assumption decisions after inspecting the changes.
