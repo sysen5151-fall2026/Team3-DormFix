@@ -1,2 +1,8 @@
 __pycache__/
 *.pyc
+.venv/
+.env
+data/*.db
+data/*.sqlite*
+data/backups/
+.pytest_cache/
