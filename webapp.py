@@ -18,6 +18,8 @@ from ticket_service import (
     resident_confirm_resolution,
     resident_reopen,
     submit_maintenance_request,
+    support_create_checkpoint,
+    support_restore_checkpoint,
     support_health,
     technician_complete,
     technician_progress,
@@ -92,6 +94,13 @@ class Handler(BaseHTTPRequestHandler):
                 if result['emergency_warning']: raise ValueError('Possible emergency keyword detected; use the appropriate emergency/housing emergency channel, not DormFix.')
                 if result['missing_fields']: raise ValueError('Missing: '+', '.join(result['missing_fields']))
                 t=submit_maintenance_request(actor,result['draft'],str(uuid.uuid4()),result['suggestions']); self._redirect(actor,'Committed '+t['ticket_id']); return
+            if action == "create_checkpoint":
+                self._redirect(actor, support_create_checkpoint(actor))
+                return
+            if action == "restore_checkpoint":
+                message = support_restore_checkpoint(actor, confirmed=f.get("confirm_restore") == "yes")
+                self._redirect(actor, message)
+                return
             tid=f.get('ticket_id','')
             if action=='assign': manager_assign(actor,tid,f['technician_id'],f['priority'])
             elif action=='progress': technician_progress(actor,tid,f.get('note',''))
@@ -133,7 +142,15 @@ class Handler(BaseHTTPRequestHandler):
         return f"<div class='card'><h2>Housing Administration summary</h2><p>Total: <strong>{s['total']}</strong> · Unfinished: <strong>{s['unfinished']}</strong></p><table><tr><th>Status</th><th>Count</th></tr>{rows}</table><p class='muted'>Aggregate-only view: no room, access, contact, or ticket history.</p></div>"
     def it(self,actor):
         h=support_health(actor); rows=''.join(f"<tr><td>{esc(d['ts'])}</td><td>{esc(d['kind'])}</td><td>{esc(d['state'])}</td><td>{esc(d['detail'])}</td></tr>" for d in h['recent_diagnostics'])
-        return f"<div class='card'><h2>IT Support</h2><p>Service: {esc(h['service'])} · Database: {esc(h['database'])}</p><table><tr><th>Time</th><th>Kind</th><th>State</th><th>Detail</th></tr>{rows}</table><p class='muted'>Ordinary IT support has diagnostics, not ticket-detail access.</p></div>"
+        backup_controls = f"""<section class='card'><h2>Backup and recovery</h2>
+          <p>Keep the two most recent verified local checkpoints.</p>
+          <form method='post'>{hidden_actor(actor)}
+          <button name='action' value='create_checkpoint'>Create verified checkpoint</button></form>
+          <form method='post'>{hidden_actor(actor)}
+          <label><input type='checkbox' style='width:auto' name='confirm_restore' value='yes' required>
+          Replace current data with the newest verified checkpoint. Later changes will be lost.</label>
+          <button name='action' value='restore_checkpoint'>Restore verified checkpoint</button></form></section>"""
+        return f"<div class='card'><h2>IT Support</h2><p>Service: {esc(h['service'])} · Database: {esc(h['database'])}</p><table><tr><th>Time</th><th>Kind</th><th>State</th><th>Detail</th></tr>{rows}</table><p class='muted'>Ordinary IT support has diagnostics, not ticket-detail access.</p></div>{backup_controls}"
 
 if __name__=='__main__':
     import argparse
