@@ -15,7 +15,7 @@ This document distinguishes **implemented demo behavior** from **planned or vali
 | SR.29 | 72-hour manager exception closure implemented with 71:59 negative boundary and 72:00 positive test | `manager_exception_close`; unit test |
 | SR.17 | Ordered event history with action, actor, time, notes and field changes | SQLite `events`; audit UI |
 | SR.19 / SR.26 / SR.27 | SQLite persistence; commit-before-ticket response; unique submission key prevents duplicate retry | `ticket_store`; persistence/idempotency test |
-| SR.20 | Authorized IT backup procedure creates a SQLite snapshot | IT page; backup test |
+| SR.20 | IT Support creates two rotating verified SQLite checkpoints and restores the newest usable generation after confirmation | Both IT interfaces, [recovery tests](../tests/test_recovery.py), [R3 register](risks.md) |
 | SR.21–SR.23 | Demo account/role maintenance; inactive accounts denied; residents/technicians scoped to own/assigned tickets; administration aggregates only; IT diagnostics only | service layer + UI + tests |
 | SR.18 | Non-sensitive diagnostic records for AI/fallback and backup operations | IT Support page |
 | 5930 integrated-prototype WBS 1.5 | Resident intake, durable ticket history, manager assignment, technician progress, resident closure/reopening, service oversight/operations | full project |
@@ -25,7 +25,7 @@ This document distinguishes **implemented demo behavior** from **planned or vali
 - **Authentication:** role-based demo identities are seeded accounts selected from the sidebar. This verifies authorization logic but is **not production authentication**.
 - **LLM:** an OpenAI-compatible local endpoint (such as LM Studio) can be configured. No external model is required; when unavailable, the UI explicitly falls back. Heuristic assistance is deterministic and must not be presented as a validated AI model.
 - **Administration:** aggregate counts are available. Advanced grouped trend analysis remains deferred.
-- **IT operations:** backup creation is implemented. Restore code exists at the data layer but the Streamlit UI intentionally avoids a one-click destructive restore during class demonstration.
+- **IT operations:** both IT interfaces expose verified backup and confirmed restore. Recovery is limited to the selected local checkpoint.
 - **Photos:** optional-photo storage/display is not implemented in this build; no claim is made that it is complete.
 - **Access-change coordination:** technician proposal → manager coordination → resident confirmation is implemented for access text, preserving the existing access arrangement until resident confirmation.
 
@@ -38,6 +38,6 @@ This document distinguishes **implemented demo behavior** from **planned or vali
 
 ## Current automated verification
 
-`python -m unittest discover -s tests -v` checks the implemented technical behaviors, including RBAC, idempotent submission, lifecycle transitions, reopen/history retention, blocked return, the 72-hour boundary, aggregate privacy, fallback behavior, and database backup.
+`python -m unittest discover -s tests -v` checks the implemented technical behaviors, including RBAC, idempotent submission, lifecycle transitions, reopen/history retention, blocked return, the 72-hour boundary, aggregate privacy, fallback behavior, and database backup and recovery.
 
 These tests are engineering evidence for this demonstration build; they do not substitute for the later human validation metrics in the course baseline.
