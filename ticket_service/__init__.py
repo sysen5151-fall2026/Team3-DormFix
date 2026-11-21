@@ -24,6 +24,9 @@ from ticket_store import (
     create_ticket,
 )
 
+from ticket_store.checkpoints import create_checkpoint, restore_checkpoint
+
+
 NEXT_STEP = {
     "Submitted": "Property manager reviews completeness, priority, and assignment.",
     "Assigned": "Assigned technician reviews job details and starts work.",
@@ -286,6 +289,28 @@ def support_backup(it_id: str, destination: str | Path) -> Path:
     path = backup_database(destination)
     record_diagnostic("backup", "ok", f"backup={path.name}")
     return path
+
+
+def support_create_checkpoint(it_id: str) -> str:
+    require_account(it_id, "IT Support")
+    checkpoint = create_checkpoint()
+    message = f"Created {checkpoint.generation} at {checkpoint.taken_at}. Ticket count: {checkpoint.tickets}."
+    record_diagnostic("backup", "ok", message)
+    return message
+
+
+def support_restore_checkpoint(it_id: str, *, confirmed: bool = False) -> str:
+    require_account(it_id, "IT Support")
+    if not confirmed:
+        raise ValueError("Confirm that restoring replaces the current database.")
+    checkpoint = restore_checkpoint()
+    selection = "previous verified checkpoint" if checkpoint.used_previous else "latest verified checkpoint"
+    noun = "ticket" if checkpoint.tickets == 1 else "tickets"
+    message = (f"Restored {checkpoint.tickets} {noun} from the {selection}, "
+               f"{checkpoint.generation} at {checkpoint.taken_at}. "
+               "Changes after that checkpoint are excluded.")
+    record_diagnostic("restore", "ok", message)
+    return message
 
 
 def support_create_or_update_account(it_id: str, account_id: str, display_name: str, role: str, active: bool = True) -> None:
