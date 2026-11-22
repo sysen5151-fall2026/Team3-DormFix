@@ -1,6 +1,23 @@
 # Verification record — generated in this delivery
 
-## Automated service-layer tests
+## Task 6 backup and recovery · 21 November 2026
+
+Python 3.12.14 and SQLite 3.53.1. The test suite ran locally against temporary databases with synthetic tickets.
+
+`python -m unittest discover -s tests -v` passed **24/24** checks (11 existing and 13 recovery and ticket-failure checks). The command-line UC.1–UC.4 demonstration also passed.
+
+| Injected condition | Observed product result |
+|---|---|
+| Newest checkpoint intact | All 11 checkpoint tickets and their complete event histories matched row for row. |
+| Newest checkpoint unreadable | The older checkpoint restored all 10 tickets and 50 events. Ticket 11 was created after it. The operator saw the generation, UTC time and recovery-gap notice. One local service call took 2.4 ms on this fixture. |
+| Both generations invalid | Restore reported no verified checkpoint. Current ticket and event rows remained identical. |
+| Valid SQLite file altered after backup | Digest verification rejected it and recovery selected the preceding generation. |
+| Live database missing | After normal app initialization, IT Support restored the checkpoint into the fresh database. |
+| Event insert failure and lost acknowledgement | The failed write left zero tickets and events. Replaying a committed request left one ticket and one submission event. |
+
+The standard-library HTTP handler was exercised from GET through POST and redirect, including the required restore confirmation. Streamlit was syntax-checked locally. The timing above is one observation on synthetic data.
+
+## Original demonstration baseline tests
 
 Command:
 

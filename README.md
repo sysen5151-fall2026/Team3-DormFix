@@ -50,6 +50,12 @@ streamlit run app.py
 
 The app initializes `data/dormfix.db` and seeds demo identities.
 
+### Create or restore a checkpoint
+
+Select the **IT Support** demo identity. In Streamlit, open **Backup**. In the standard-library web app, scroll to **Backup and recovery**. Select **Create verified checkpoint** after the work you want to preserve. Two generations are retained per database in its adjacent `backups/<database filename>/` directory.
+
+During a quiet period, check the replacement confirmation and select **Restore verified checkpoint**. This replaces the whole local database, including accounts and ticket history. The result identifies the generation, UTC time and recovered ticket count. If the newest copy fails verification, the app tries the older one. If both fail, it leaves the live data in place. Each snapshot contains the demo records, so keep the backup directory out of Git.
+
 ### Optional API
 
 ```bash

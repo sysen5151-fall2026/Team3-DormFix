@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import json
-import shutil
 import sqlite3
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -284,6 +283,9 @@ def restore_database(source: str | Path) -> None:
     source = Path(source)
     if not source.exists():
         raise FileNotFoundError(source)
-    p = db_path()
-    p.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, p)
+    target = db_path()
+    if target.exists() and source.samefile(target):
+        raise ValueError("The live database cannot be its own restore source")
+    with closing(sqlite3.connect(source.resolve().as_uri() + "?mode=ro", uri=True)) as snapshot:
+        with closing(sqlite3.connect(target)) as live:
+            snapshot.backup(live)

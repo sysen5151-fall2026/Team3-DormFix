@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
 
 import streamlit as st
 
@@ -26,7 +24,8 @@ from ticket_service import (
     resident_confirm_resolution,
     resident_reopen,
     submit_maintenance_request,
-    support_backup,
+    support_create_checkpoint,
+    support_restore_checkpoint,
     support_create_or_update_account,
     support_health,
     support_set_account_active,
@@ -254,10 +253,17 @@ elif role == "IT Support":
         st.json(support_health(actor_id))
         st.caption("Diagnostics are designed to omit resident descriptions, contacts, and photos.")
     with tab2:
-        if st.button("Create SQLite backup"):
-            dest = Path("data/backups") / f"dormfix-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.db"
-            p = support_backup(actor_id, dest)
-            st.success(f"Backup created: {p}")
+        st.caption("Keep the two most recent verified local checkpoints.")
+        try:
+            if st.button("Create verified checkpoint"):
+                st.success(support_create_checkpoint(actor_id))
+            with st.form("restore-checkpoint", clear_on_submit=True):
+                confirmed = st.checkbox("Replace current data with the newest verified checkpoint. Later changes will be lost.")
+                restore = st.form_submit_button("Restore verified checkpoint")
+            if restore:
+                st.success(support_restore_checkpoint(actor_id, confirmed=confirmed))
+        except Exception as exc:
+            st.error(str(exc))
     with tab3:
         st.dataframe(demo_accounts(), use_container_width=True, hide_index=True)
         with st.form("account-form"):
