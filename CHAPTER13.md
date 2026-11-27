@@ -1,0 +1,25 @@
+# DormFix Chapter 13
+
+Use a new directory for the grading build. This source extends the course demonstration at GitHub revision 510a254f0f0f5857f774bf2e493ff082bc0be81e. The source tree and the PDF's attached ZIP contain the same grading entry point.
+
+## Start
+
+Use CPython 3.12. The grading path has no third-party Python packages. The Windows verification used CPython 3.12.14 and linked SQLite 3.53.1. The optional historical Streamlit and FastAPI paths have separate dependencies and are outside the grading setup.
+
+1. Extract the source ZIP and change into the directory containing chapter13.py, or clone the enclosed Git bundle as described in START_HERE.txt. 
+2. Use LM Studio Desktop or its headless server, llmster, with the `lms` CLI. The original course model is Meta Llama 3.1 8B Instruct. On a new Linux CPU runner, obtain the official installer from https://lmstudio.ai/install.sh and run it with bash. On Windows or Mac, install LM Studio from https://lmstudio.ai/download and launch it once. Run `python scripts/start_model.py` (add `--cpu` to force CPU on an empty Linux runner). The launcher reuses the original model if available. On a fresh install it downloads the 4.92 GB Q4_K_M GGUF, verifies SHA-256, imports it, and loads it on loopback port 1234. Keep the daemon running. If reusing an instance, copy the printed `--model` argument into the application command below. The exact upstream file is https://huggingface.co/lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf. This file is governed by the Llama 3.1 Community License. Software and weights are obtained directly from their suppliers.
+3. In terminal 2 run `python chapter13.py --db data/ch13-demo.sqlite` and open http://127.0.0.1:8502/. The first launch seeds seven synthetic accounts and zero tickets. The same path reopens existing tickets on restart. For a fresh rehearsal, choose another new database filename.
+4. As Alex Resident enter "The kitchen sink drips", building "Test Hall", room "101". Select **Prepare draft** with model assistance enabled. The source line must read **Language model** for the live demonstration. **Manual fallback** records an unavailable or malformed response. Review the proposed category, enter "After 4 PM", choose plumbing and select **Confirm and submit**. Record the returned ID and Submitted status.
+5. Select Morgan Manager, locate that ID and assign Taylor Technician with Normal priority. As Taylor enter a progress note, then complete the job. As Alex confirm resolution, then reopen with a reason. Show the same ID and retained history. Administration sees aggregates. IT Support sees diagnostics and checkpoint controls.
+6. For the failure demonstration run `python verify_ch13.py`. It uses its own temporary database and a deliberately wrong HTTP model fixture. To require the actual running weights, use `python verify_ch13.py --live`. The live acceptance command verifies the native LM Studio inventory and the model ID on each response, permits 180 seconds per inference on CPU, and checks closure and persistence after restart. Use --model to select a specific loaded instance if needed. A model fallback fails live acceptance. The ordinary web UI remains usable with manual intake.
+
+## Checks and records
+
+The launcher places verified GGUF bytes in LM Studio's publisher/repository model directory, without interactive import prompts. If you changed the model-storage location in LM Studio, pass that folder using `--models-dir`. The downloaded model remains available for retries.
+
+- `python -m unittest discover -s tests -v` runs the service, access, history, summary and recovery checks.
+- `node --test tests/test_resident_ui.cjs` executes the shipped browser script with DOM/transport test controls. Node 24.21.0 was used only for this test.
+- `python verify_inprocess.py` executes the fault campaign when sockets are unavailable. It uses actual REST handlers, the deployed model adapter and SQLite with an in-memory transport and synthetic model. Network timing and trained-weight inference are outside this mode.
+- The 7-day repeat window is a demonstration setting. Set DORMFIX_REPEAT_DAYS to 1–365 before launch to change it. Repeat counting uses distinct reports in the same building/room/category, inclusive of the boundary. Deployment T requires owner agreement.
+- The local model endpoint receives the report text and any entered category/access text. Separate contact, building and room fields are excluded from the model request. Use synthetic records. There is no SSO, real dispatch or institutional data feed. Photos and grouped trend analysis are outside this build.
+- Model and trace evidence: docs/ch13/, contracts/ch13.md, docs/adr/0003-grading-build.md, docs/baselines/ and the original docs/prompt-log.md. Machine-readable evidence records identify the exact test mode.

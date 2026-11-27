@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import html
 import uuid
+from pathlib import Path
+from resident_api import handle as handle_resident_api
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -71,6 +73,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(303); self.send_header('Location','/?'+urlencode(q)); self.end_headers()
     def log_message(self, fmt, *args): pass
     def do_GET(self):
+        if handle_resident_api(self): return
+        if urlparse(self.path).path == '/resident_intake.js':
+            script = Path(__file__).with_name('resident_intake.js').read_bytes()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/javascript; charset=utf-8')
+            self.send_header('Content-Length', str(len(script)))
+            self.end_headers()
+            self.wfile.write(script)
+            return
         q=parse_qs(urlparse(self.path).query); actor=q.get('actor',['resident.alex'])[0]; msg=q.get('msg',[''])[0]
         acct=next((a for a in demo_accounts() if a['account_id']==actor and a['active']),None)
         if not acct: actor='resident.alex'; acct=next(a for a in demo_accounts() if a['account_id']==actor)
@@ -87,6 +98,7 @@ class Handler(BaseHTTPRequestHandler):
     def _form(self):
         n=int(self.headers.get('Content-Length','0')); return {k:v[0] for k,v in parse_qs(self.rfile.read(n).decode()).items()}
     def do_POST(self):
+        if handle_resident_api(self): return
         f=self._form(); actor=f.get('actor','resident.alex'); action=f.get('action','')
         try:
             if action=='create':
@@ -114,7 +126,18 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             self._redirect(actor,f"{type(exc).__name__}: {exc}")
     def resident(self,actor):
-        form=f"""<div class='card'><h2>Report maintenance</h2><form method='post'>{hidden_actor(actor)}<input type='hidden' name='action' value='create'><label>Description<textarea name='description' required></textarea></label><div class='grid'><label>Building<input name='building' required></label><label>Room<input name='room' required></label><label>Category<select name='category'>{''.join(f'<option>{c}</option>' for c in SUPPORTED_CATEGORIES)}</select></label><label>Access availability<input name='availability' required></label></div><label>Resident contact (manager-only, optional)<input name='resident_contact'></label><button>Create confirmed demo ticket</button></form><p class='muted'>The Streamlit UI provides the full two-step editable draft/explicit-confirmation interaction. This zero-dependency fallback uses this submitted form as the confirmation step.</p></div>"""
+        form=f"""<section class='card'><h2>Report maintenance</h2>
+        <form id='intake'>{hidden_actor(actor)}
+        <label>Description<textarea name='description' required></textarea></label>
+        <div class='grid'><label>Building<input name='building'></label><label>Room<input name='room'></label>
+        <label>Category<select name='category'><option value=''>Select a category</option>{''.join(f'<option>{c}</option>' for c in SUPPORTED_CATEGORIES)}</select></label>
+        <label>Access availability<input name='availability'></label></div>
+        <label>Resident contact (manager only)<input name='resident_contact'></label>
+        <label><input name='use_ai' type='checkbox' checked style='width:auto'> Use model assistance</label>
+        <button id='prepare-draft'>Prepare draft</button>
+        <button type='button' id='confirm-draft' hidden>Confirm and submit</button>
+        <p id='intake-result' role='status' aria-live='polite'></p></form>
+        <script src='/resident_intake.js' defer></script></section>"""
         parts=[form]
         for t in list_visible_tickets(actor):
             parts.append(ticket_view(t))
@@ -139,7 +162,7 @@ class Handler(BaseHTTPRequestHandler):
         return ''.join(parts)
     def admin(self,actor):
         s=administration_summary(actor); rows=''.join(f"<tr><td>{esc(k)}</td><td>{v}</td></tr>" for k,v in s['by_status'].items())
-        return f"<div class='card'><h2>Housing Administration summary</h2><p>Total: <strong>{s['total']}</strong> · Unfinished: <strong>{s['unfinished']}</strong></p><table><tr><th>Status</th><th>Count</th></tr>{rows}</table><p class='muted'>Aggregate-only view: no room, access, contact, or ticket history.</p></div>"
+        return f"<div class='card'><h2>Housing Administration summary</h2><p>Total: <strong>{s['total']}</strong> · Unfinished: <strong>{s['unfinished']}</strong></p><p>Mean age of open work (hours): {esc(s['mean_open_age_hours']) or '—'} · Mean time to close (hours): {esc(s['mean_closed_duration_hours']) or '—'}</p><p>Repeat reports in the {s['repeat_days']}-day window: {s['repeat_count']}. Cohort: all demo tickets.</p><table><tr><th>Status</th><th>Count</th></tr>{rows}</table><p class='muted'>Aggregate-only view: no room, access, contact, or ticket history.</p></div>"
     def it(self,actor):
         h=support_health(actor); rows=''.join(f"<tr><td>{esc(d['ts'])}</td><td>{esc(d['kind'])}</td><td>{esc(d['state'])}</td><td>{esc(d['detail'])}</td></tr>" for d in h['recent_diagnostics'])
         backup_controls = f"""<section class='card'><h2>Backup and recovery</h2>

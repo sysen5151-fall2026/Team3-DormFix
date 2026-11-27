@@ -1,5 +1,6 @@
 """Exercise the product's checkpoint and ticket failure paths on disposable databases."""
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from io import BytesIO
 from pathlib import Path
 import json
@@ -92,7 +93,7 @@ class RecoveryTests(unittest.TestCase):
 
     def test_checksum_catches_a_readable_but_modified_snapshot(self):
         _, newer, ten, _ = self.two_versions()
-        with sqlite3.connect(newer / "snapshot.sqlite") as db:
+        with closing(sqlite3.connect(newer / "snapshot.sqlite")) as db, db:
             db.execute("UPDATE tickets SET room='changed' WHERE submission_key='10'")
             self.assertEqual(db.execute("PRAGMA integrity_check").fetchone(), ("ok",))
         self.restore()

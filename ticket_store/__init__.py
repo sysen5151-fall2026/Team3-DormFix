@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from contextlib import closing, contextmanager
 from datetime import datetime, timezone
@@ -179,8 +180,11 @@ def next_ticket_id(c: sqlite3.Connection) -> str:
 def create_ticket(*, submission_key: str, resident_id: str, request: dict[str, Any], ai_suggestions: dict[str, Any]) -> dict[str, Any]:
     now = utcnow()
     with connect() as c:
+        c.execute("BEGIN IMMEDIATE")
         existing = c.execute("SELECT * FROM tickets WHERE submission_key=?", (submission_key,)).fetchone()
         if existing:
+            if existing["resident_id"] != resident_id:
+                raise PermissionError("Submission key is unavailable")
             return rowdict(existing)  # idempotent retry
         ticket_id = next_ticket_id(c)
         c.execute(
@@ -226,6 +230,8 @@ def update_ticket(ticket_id: str, actor_id: str, changes: dict[str, Any], event_
         for field, value in changes.items():
             old = current.get(field)
             db_value = json.dumps(value) if field == "pending_access" and value is not None else value
+            if field == "needs_information":
+                db_value = int(bool(value))
             c.execute(f"UPDATE tickets SET {field}=?, updated_at=? WHERE ticket_id=?", (db_value, now, ticket_id))
             if str(old) != str(db_value):
                 c.execute(
@@ -260,11 +266,35 @@ def diagnostics(limit: int = 50) -> list[dict[str, Any]]:
 
 
 def aggregate_summary() -> dict[str, Any]:
+    window_days = int(os.environ.get("DORMFIX_REPEAT_DAYS", "7"))
+    if not 1 <= window_days <= 365:
+        raise ValueError("Choose a repeat window of 1 to 365 days")
     with connect() as c:
-        rows = c.execute("SELECT status, COUNT(*) AS n FROM tickets GROUP BY status").fetchall()
-        total = c.execute("SELECT COUNT(*) FROM tickets").fetchone()[0]
-        unfinished = c.execute("SELECT COUNT(*) FROM tickets WHERE status != 'Closed'").fetchone()[0]
-        return {"cohort": "all demo tickets", "total": total, "unfinished": unfinished, "by_status": {r["status"]: r["n"] for r in rows}}
+        rows = c.execute("""SELECT ticket_id,status,building,room,category,submitted_at,updated_at
+                            FROM tickets ORDER BY submitted_at,ticket_id""").fetchall()
+    now = datetime.now(timezone.utc)
+    by_status = {}
+    open_hours, closed_hours = [], []
+    last_seen = {}
+    repeats = 0
+    for row in rows:
+        status = row["status"]
+        by_status[status] = by_status.get(status, 0) + 1
+        start = datetime.fromisoformat(row["submitted_at"])
+        if status == "Closed":
+            finish = datetime.fromisoformat(row["updated_at"])
+            closed_hours.append((finish-start).total_seconds()/3600)
+        else:
+            open_hours.append((now-start).total_seconds()/3600)
+        group = tuple(row[k].strip().casefold() for k in ("building","room","category"))
+        if group in last_seen and (start-last_seen[group]).total_seconds() <= window_days*86400:
+            repeats += 1
+        last_seen[group] = start
+    def mean(values):
+        return round(sum(values)/len(values),2) if values else None
+    return {"cohort":"all demo tickets","total":len(rows),"unfinished":len(open_hours),"by_status":by_status,
+            "mean_open_age_hours":mean(open_hours),"mean_closed_duration_hours":mean(closed_hours),
+            "repeat_days":window_days,"repeat_count":repeats}
 
 
 def backup_database(destination: str | Path) -> Path:

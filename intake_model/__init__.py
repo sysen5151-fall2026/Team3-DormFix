@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import urllib.error
 import urllib.request
@@ -48,11 +49,11 @@ def _call_llm(description: str, provided: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("No LLM endpoint configured")
     prompt = {
         "description": description,
-        "provided": provided,
+        "provided": {k: provided[k] for k in ("category", "availability") if provided.get(k)},
         "allowed_categories": list(SUPPORTED_CATEGORIES),
         "instruction": (
-            "Return one JSON object with only category, summary, location, availability, missing_fields. "
-            "Use null for unknown values. Never invent building/room/access. Never return priority or assignee."
+            "Suggest a category and a short factual summary of the resident description. "
+            "Never infer permission to enter, priority, assignment or a location."
         ),
     }
     body = {
@@ -62,7 +63,12 @@ def _call_llm(description: str, provided: dict[str, Any]) -> dict[str, Any]:
             {"role": "user", "content": json.dumps(prompt)},
         ],
         "temperature": 0,
-        "response_format": {"type": "json_object"},
+        "max_tokens": 150,
+        "response_format": {"type":"json_schema", "json_schema":{"name":"maintenance_draft","strict":True,"schema":{
+            "type":"object", "properties":{
+                "category":{"type":"string","enum":list(SUPPORTED_CATEGORIES)},
+                "summary":{"type":"string"}},
+            "required":["category","summary"],"additionalProperties":False}}},
     }
     req = urllib.request.Request(
         LLM_URL,
@@ -74,7 +80,8 @@ def _call_llm(description: str, provided: dict[str, Any]) -> dict[str, Any]:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        timeout = float(os.getenv("DORMFIX_LLM_TIMEOUT_SECONDS", "30"))
+        with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         record_diagnostic("ai_connection", "failure", type(exc).__name__)
@@ -85,13 +92,20 @@ def _call_llm(description: str, provided: dict[str, Any]) -> dict[str, Any]:
     except Exception as exc:
         record_diagnostic("ai_response", "failure", "malformed_response")
         raise RuntimeError("AI response malformed") from exc
+    if not isinstance(data, dict) or not any(k in data for k in ("category", "summary", "missing_fields")):
+        raise RuntimeError("AI response must contain draft fields")
     allowed = {"category", "summary", "location", "availability", "missing_fields"}
     data = {k: v for k, v in data.items() if k in allowed}
+    for key in ("category", "summary", "location", "availability"):
+        if data.get(key) is not None and not isinstance(data[key], str):
+            raise RuntimeError("Invalid AI field type")
     if data.get("category") not in (*SUPPORTED_CATEGORIES, None):
         data["category"] = None
     if not isinstance(data.get("missing_fields", []), list):
         raise RuntimeError("AI missing_fields must be a list")
     data["source"] = "configured-llm"
+    if isinstance(payload.get("model"), str):
+        data["served_model"] = payload["model"]
     return data
 
 
@@ -116,7 +130,7 @@ def structure_request(description: str, provided: dict[str, Any] | None = None, 
         "building": (provided.get("building") or "").strip(),
         "room": (provided.get("room") or "").strip(),
         "category": (provided.get("category") or suggestions.get("category") or "").strip(),
-        "availability": (provided.get("availability") or suggestions.get("availability") or "").strip(),
+        "availability": (provided.get("availability") or "").strip(),
         "resident_contact": (provided.get("resident_contact") or "").strip(),
     }
     missing = [f for f in ("description", "building", "room", "category", "availability") if not draft.get(f)]

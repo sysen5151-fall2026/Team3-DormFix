@@ -1,0 +1,37 @@
+{
+  "assign": {
+    "n": 35,
+    "median_ms": 7.84,
+    "p95_ms": 8.62
+  },
+  "progress": {
+    "n": 35,
+    "median_ms": 11.23,
+    "p95_ms": 12.83
+  },
+  "complete": {
+    "n": 35,
+    "median_ms": 11.18,
+    "p95_ms": 13.05
+  },
+  "resolve": {
+    "n": 35,
+    "median_ms": 6.73,
+    "p95_ms": 8.27
+  },
+  "summary": {
+    "n": 35,
+    "median_ms": 2.85,
+    "p95_ms": 3.38
+  },
+  "checkpoint": {
+    "n": 10,
+    "median_ms": 33.1,
+    "p95_ms": 36.31
+  },
+  "restore": {
+    "n": 10,
+    "median_ms": 16.72,
+    "p95_ms": 17.98
+  }
+}
