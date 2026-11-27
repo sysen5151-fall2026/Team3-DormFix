@@ -28,18 +28,22 @@ FIXTURE = {"description":"The kitchen sink drips.", "building":"Test Hall","room
 
 class ModelFixture(BaseHTTPRequestHandler):
     calls = []
+    replies = []
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         prompt = json.loads(body["messages"][1]["content"])
         self.calls.append(prompt)
-        payload = {"category":"electrical","summary":"Electrical repair","availability":"2 AM",
-                   "location":"Invented room", "missing_fields":[], "priority":"High","assignee":"tech.jordan"}
+        payload = {"category":"electrical","summary":"Electrical repair"}
+        if "extra-fields" in prompt["description"]:
+            payload.update(availability="2 AM", location="Invented room", missing_fields=[],
+                           priority="High", assignee="tech.jordan")
         if "wrong-type" in prompt["description"]:
             payload["availability"] = ["tomorrow"]
         if "unavailable" in prompt["description"]:
             self.send_error(503)
             return
+        self.replies.append((body["response_format"]["json_schema"]["schema"], payload))
         reply = {"choices":[{"message":{"content":json.dumps(payload)}}]}
         self.send_response(200)
         self.end_headers()
@@ -105,9 +109,16 @@ def run(url, db, live):
     sample=call("draft","/api/drafts",FIXTURE)
     check(sample["suggestions"]["source"]=="configured-llm" and not sample["manual_fallback"],"real adapter response")
     if not live:
-        check(sample["suggestions"]["category"]=="electrical" and sample["suggestions"]["availability"]=="2 AM","well-formed wrong fixture")
-        check("priority" not in sample["suggestions"] and "assignee" not in sample["suggestions"],"authority")
+        schema, raw = ModelFixture.replies[-1]
+        check(set(raw) == set(schema["required"]) == {"category", "summary"}, "exact required fields")
+        check(all(isinstance(value, str) for value in raw.values()), "both fields are strings")
+        check(raw["category"] in schema["properties"]["category"]["enum"], "category is permitted")
+        check(sample["draft"]["category"] == "electrical" and not sample["manual_fallback"], "schema-valid incorrect meaning")
         check("resident_contact" not in ModelFixture.calls[-1]["provided"],"private fields")
+        extra = request(url+"/api/drafts", dict(FIXTURE, description="The sink drips. extra-fields"))[1]
+        check(extra["suggestions"]["availability"] == "2 AM", "exercised spurious access")
+        check(extra["draft"]["availability"] == "" and extra["draft"]["room"] == "101", "resident authority")
+        check("priority" not in extra["suggestions"] and "assignee" not in extra["suggestions"], "manager authority")
     check(sample["draft"]["availability"]=="" and "availability" in sample["missing_fields"],"invented access excluded")
     check(sample["draft"]["room"]=="101","preserve original location")
     with closing(sqlite3.connect(db)) as conn:
@@ -119,7 +130,7 @@ def run(url, db, live):
     receipt=call("confirm","/api/tickets",submit)
     tid=receipt["ticket_id"]
     record=call("read","/api/tickets/"+tid)
-    check(record["category"]=="plumbing" and record["availability"]=="After 4 PM" and not record["priority"],"confirmed meaning")
+    check(record["category"]=="plumbing" and record["availability"]=="After 4 PM" and not record["priority"] and not record["assigned_technician"],"confirmed meaning")
     check(tid in request(url)[1],"acknowledged ticket renders in resident page")
     check(request(url+"/api/tickets/"+tid,actor="resident.sam")[0]==403,"scoped read")
     check(request(url+"/api/drafts",FIXTURE,actor="")[0]==401,"missing actor")
@@ -155,6 +166,8 @@ def run(url, db, live):
         s=sorted(samples)
         return {"n":len(s),"median_ms":round(statistics.median(s),2),"p95_ms":round(s[math.ceil(.95*len(s))-1],2),"max_ms":round(s[-1],2)}
     print(json.dumps({"mode":"weights" if live else "injected HTTP model","volume":count,
+                      "schema_valid_wrong_category_contained":None if live else True,
+                      "additional_access_and_authority_fields_contained":None if live else True,
                       "example_suggestion":sample["suggestions"].get("category"),"committed":"plumbing",
                       "lifecycle":record["status"],"timings":{k:stats(v) for k,v in timings.items()}},indent=2),flush=True)
     return tid
