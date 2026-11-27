@@ -15,6 +15,8 @@ Use CPython 3.12. The grading path has no third-party Python packages. The Windo
 
 ## Checks and records
 
+The launcher places verified GGUF bytes in LM Studio's publisher/repository model directory, without interactive import prompts. If you changed the model-storage location in LM Studio, pass that folder using `--models-dir`. The downloaded model remains available for retries.
+
 - `python -m unittest discover -s tests -v` runs the service, access, history, summary and recovery checks.
 - `node --test tests/test_resident_ui.cjs` executes the shipped browser script with DOM/transport test controls. Node 24.21.0 was used only for this test.
 - `python verify_inprocess.py` executes the fault campaign when sockets are unavailable. It uses actual REST handlers, the deployed model adapter and SQLite with an in-memory transport and synthetic model. Network timing and trained-weight inference are outside this mode.

@@ -65,9 +65,37 @@ def cli_path():
     raise RuntimeError("LM Studio CLI missing. Install LM Studio desktop or the official llmster headless package. See CHAPTER13.md.")
 
 
+def stage_gguf(models_dir):
+    target = models_dir / MODEL_REPO / MODEL_FILE
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        with tempfile.TemporaryDirectory(dir=target.parent) as temp:
+            partial = Path(temp) / "weights.part"
+            print("Downloading the original GGUF to the LM Studio model directory.", flush=True)
+            total = 0
+            with urlopen(MODEL_URL, timeout=180) as src, partial.open("wb") as dst:
+                while chunk := src.read(4*1024*1024):
+                    dst.write(chunk)
+                    total += len(chunk)
+                    if total // (256*1024*1024) != (total-len(chunk)) // (256*1024*1024):
+                        print(f"Downloaded {total//(1024*1024)} MiB",flush=True)
+            with partial.open("rb") as stream:
+                if hashlib.file_digest(stream,"sha256").hexdigest() != MODEL_SHA:
+                    raise RuntimeError("GGUF checksum mismatch. The unverified file was not installed.")
+            partial.replace(target)
+    with target.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    if digest != MODEL_SHA:
+        raise RuntimeError(f"The existing file at {target} has a different digest. Choose the intended model directory.")
+    print("Verified original GGUF: " + digest, flush=True)
+    return digest
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cpu", action="store_true", help="disable GPU offload for the clean CPU run")
+    parser.add_argument("--models-dir",type=Path,default=Path.home()/".lmstudio"/"models",
+                        help="use the directory selected in LM Studio if it differs from the default")
     args = parser.parse_args()
     cli = cli_path()
     def cmd(*argv):
@@ -87,24 +115,16 @@ def main():
                 time.sleep(1)
     matches = [item for item in catalog if original(item)]
     sha = None
-    if not matches:
-        with tempfile.TemporaryDirectory(prefix="dormfix-gguf-") as temp:
-            file = Path(temp) / MODEL_FILE
-            print("Downloading the 4.92 GB Llama 3.1 8B Instruct Q4_K_M from its model repository.", flush=True)
-            with urlopen(MODEL_URL, timeout=180) as src, file.open("wb") as dst:
-                shutil.copyfileobj(src, dst, length=4*1024*1024)
-            with file.open("rb") as handle:
-                sha = hashlib.file_digest(handle, "sha256").hexdigest()
-            if sha != MODEL_SHA:
-                raise RuntimeError("GGUF SHA-256 mismatch.")
-            cmd("import", str(file), "--user-repo", MODEL_REPO, "-y")
+    if not matches or (args.models_dir / MODEL_REPO / MODEL_FILE).is_file():
+        sha = stage_gguf(args.models_dir)
         for attempt in range(30):
             matches = [item for item in models() if original(item)]
             if matches:
                 break
             time.sleep(1)
     if not matches:
-        raise RuntimeError("Imported weights did not appear in the LM Studio model inventory.")
+        raise RuntimeError("Original weights not identified in LM Studio: " + json.dumps(
+            [(m.get("key"),m.get("display_name")) for m in models()]))
     try:
         model, instance = loaded()
     except RuntimeError:
