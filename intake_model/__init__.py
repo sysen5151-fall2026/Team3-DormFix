@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import urllib.error
 import urllib.request
@@ -63,7 +64,7 @@ def _call_llm(description: str, provided: dict[str, Any]) -> dict[str, Any]:
         ],
         "temperature": 0,
         "max_tokens": 150,
-        "response_format": {"type":"json_schema", "json_schema":{"name":"maintenance_draft","schema":{
+        "response_format": {"type":"json_schema", "json_schema":{"name":"maintenance_draft","strict":True,"schema":{
             "type":"object", "properties":{
                 "category":{"type":"string","enum":list(SUPPORTED_CATEGORIES)},
                 "summary":{"type":"string"}},
@@ -79,7 +80,8 @@ def _call_llm(description: str, provided: dict[str, Any]) -> dict[str, Any]:
         method="POST",
     )
     try:
-        with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=30) as resp:
+        timeout = float(os.getenv("DORMFIX_LLM_TIMEOUT_SECONDS", "30"))
+        with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         record_diagnostic("ai_connection", "failure", type(exc).__name__)
@@ -102,6 +104,8 @@ def _call_llm(description: str, provided: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(data.get("missing_fields", []), list):
         raise RuntimeError("AI missing_fields must be a list")
     data["source"] = "configured-llm"
+    if isinstance(payload.get("model"), str):
+        data["served_model"] = payload["model"]
     return data
 
 

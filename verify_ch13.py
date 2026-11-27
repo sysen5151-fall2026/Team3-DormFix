@@ -5,6 +5,7 @@ from contextlib import closing, contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
+import os
 from pathlib import Path
 import socket
 import sqlite3
@@ -18,6 +19,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import build_opener, ProxyHandler, Request
 import uuid
+from scripts.start_model import BASE, DEFAULT_MODEL, loaded
 
 ROOT = Path(__file__).resolve().parent
 CLIENT = build_opener(ProxyHandler({}))
@@ -60,7 +62,7 @@ def request(url, body=None, actor=RES, form=False):
         headers["Content-Type"] = "application/x-www-form-urlencoded" if form else "application/json"
         data = urlencode(body).encode() if form else json.dumps(body).encode()
     try:
-        res = CLIENT.open(Request(url, data=data, headers=headers), timeout=50)
+        res = CLIENT.open(Request(url, data=data, headers=headers), timeout=float(os.getenv("DORMFIX_LLM_TIMEOUT_SECONDS","30"))+20)
     except HTTPError as err:
         res = err
     with res:
@@ -69,13 +71,13 @@ def request(url, body=None, actor=RES, form=False):
 
 
 @contextmanager
-def app(db, endpoint):
+def app(db, endpoint, model=DEFAULT_MODEL):
     with socket.socket() as sock:
         sock.bind(("127.0.0.1",0))
         port = sock.getsockname()[1]
     url = f"http://127.0.0.1:{port}"
     proc = subprocess.Popen([sys.executable, str(ROOT/"chapter13.py"),"--port",str(port),"--db",str(db),
-                             "--model-url",endpoint], cwd=ROOT, stdout=subprocess.DEVNULL)
+                             "--model-url",endpoint, "--model",model], cwd=ROOT, stdout=subprocess.DEVNULL)
     try:
         for _ in range(130):
             if proc.poll() is not None:
@@ -95,7 +97,7 @@ def check(condition, name):
     if not condition: raise AssertionError(name)
 
 
-def run(url, db, live):
+def run(url, db, live, accepted_model_ids=()):
     timings = {k:[] for k in ["draft","confirm","read"]}
     def call(label, path, body=None, actor=RES):
         tick = time.perf_counter()
@@ -108,6 +110,8 @@ def run(url, db, live):
     check('/api/drafts' in request(url+'/resident_intake.js')[1], "browser calls REST")
     sample=call("draft","/api/drafts",FIXTURE)
     check(sample["suggestions"]["source"]=="configured-llm" and not sample["manual_fallback"],"real adapter response")
+    if live:
+        check(sample["suggestions"].get("served_model") in accepted_model_ids, "reply model matches LM Studio inventory")
     if not live:
         schema, raw = ModelFixture.replies[-1]
         check(set(raw) == set(schema["required"]) == {"category", "summary"}, "exact required fields")
@@ -157,7 +161,10 @@ def run(url, db, live):
     def trial(i):
         res=call("draft","/api/drafts",dict(FIXTURE,description=f"The sink drips in test {i}."))
         check(res["suggestions"]["source"]=="configured-llm","model active in volume run")
-        body=dict(submit,submission_key=str(uuid.uuid4()),draft=dict(submit["draft"],room=str(200+i)))
+        if live:
+            check(res["suggestions"].get("served_model") in accepted_model_ids, "volume reply model identity")
+        body=dict(submit,submission_key=str(uuid.uuid4()),suggestions=res["suggestions"],
+                  draft=dict(res["draft"],category="plumbing",availability="After 4 PM",room=str(200+i)))
         saved=call("confirm","/api/tickets",body)
         got=call("read","/api/tickets/"+saved["ticket_id"])
         check(got["room"]==str(200+i) and len(got["history"])==1,"concurrent row correspondence")
@@ -165,7 +172,9 @@ def run(url, db, live):
     def stats(samples):
         s=sorted(samples)
         return {"n":len(s),"median_ms":round(statistics.median(s),2),"p95_ms":round(s[math.ceil(.95*len(s))-1],2),"max_ms":round(s[-1],2)}
-    print(json.dumps({"mode":"weights" if live else "injected HTTP model","volume":count,
+    print(json.dumps({"mode":"weights" if live else "injected HTTP model","volume":count,"ticket_id":tid,
+                      "sample_summary":sample["suggestions"].get("summary"),
+                      "served_model":sample["suggestions"].get("served_model"),
                       "schema_valid_wrong_category_contained":None if live else True,
                       "additional_access_and_authority_fields_contained":None if live else True,
                       "example_suggestion":sample["suggestions"].get("category"),"committed":"plumbing",
@@ -176,14 +185,24 @@ def run(url, db, live):
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--live",action="store_true",help="require the real local weights, never a fallback")
+    parser.add_argument("--base-url", default=BASE, help="LM Studio server serving local models")
+    parser.add_argument("--model", help="exact loaded instance to select on an LM Studio server")
     args=parser.parse_args()
     fixture=ThreadingHTTPServer(("127.0.0.1",0),ModelFixture) if not args.live else None
     if fixture: threading.Thread(target=fixture.serve_forever,daemon=True).start()
-    port=fixture.server_port if fixture else 8081
+    model=DEFAULT_MODEL
+    accepted_models=()
+    if args.live:
+        original, model = loaded(args.base_url, args.model)
+        accepted_models=(model,original["key"])
+        os.environ.setdefault("DORMFIX_LLM_TIMEOUT_SECONDS","180")
+        print("Verified LM Studio inventory: " + json.dumps({"key":original["key"],"instance":model,
+              "quantization":original.get("quantization")}), flush=True)
+    base=args.base_url.rstrip("/") if args.live else f"http://127.0.0.1:{fixture.server_port}"
     try:
         with tempfile.TemporaryDirectory() as temp:
             db=Path(temp)/"fresh.sqlite"
-            with app(db,f"http://127.0.0.1:{port}/v1/chat/completions") as url: tid=run(url,db,args.live)
+            with app(db,base+"/v1/chat/completions",model) as url: tid=run(url,db,args.live,accepted_models)
             with app(db,"") as url:
                 check(request(url+"/api/tickets/"+tid)[1]["status"]=="Closed","restart durability")
                 check(request(url+"/api/drafts",FIXTURE)[1]["manual_fallback"],"manual-only launch")
