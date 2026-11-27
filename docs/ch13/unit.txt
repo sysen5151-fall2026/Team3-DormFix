@@ -1,0 +1,33 @@
+test_access_changes_and_manager_corrections (test_chapter13.Chapter13Checks.test_access_changes_and_manager_corrections) ... ok
+test_duration_and_inclusive_repeat_window (test_chapter13.Chapter13Checks.test_duration_and_inclusive_repeat_window) ... ok
+test_model_timeout_keeps_manual_path (test_chapter13.Chapter13Checks.test_model_timeout_keeps_manual_path) ... ok
+test_ten_sampled_histories_and_queue (test_chapter13.Chapter13Checks.test_ten_sampled_histories_and_queue) ... ok
+test_72_hour_exception_boundary (test_dormfix.DormFixFlowTests.test_72_hour_exception_boundary) ... ok
+test_admin_receives_aggregates_only (test_dormfix.DormFixFlowTests.test_admin_receives_aggregates_only) ... ok
+test_backup_contains_committed_ticket (test_dormfix.DormFixFlowTests.test_backup_contains_committed_ticket) ... ok
+test_blocked_work_return_requires_reason_and_returns_to_manager (test_dormfix.DormFixFlowTests.test_blocked_work_return_requires_reason_and_returns_to_manager) ... ok
+test_emergency_boundary_notice_and_ai_fallback (test_dormfix.DormFixFlowTests.test_emergency_boundary_notice_and_ai_fallback) ... ok
+test_end_to_end_close_and_reopen_history (test_dormfix.DormFixFlowTests.test_end_to_end_close_and_reopen_history) ... ok
+test_explicit_submission_requires_complete_draft (test_dormfix.DormFixFlowTests.test_explicit_submission_requires_complete_draft) ... ok
+test_missing_information_is_not_invented (test_dormfix.DormFixFlowTests.test_missing_information_is_not_invented) ... ok
+test_only_manager_assigns_and_assignment_gate (test_dormfix.DormFixFlowTests.test_only_manager_assigns_and_assignment_gate) ... ok
+test_role_based_ticket_access (test_dormfix.DormFixFlowTests.test_role_based_ticket_access) ... ok
+test_submission_is_persistent_and_idempotent (test_dormfix.DormFixFlowTests.test_submission_is_persistent_and_idempotent) ... ok
+test_both_invalid_leave_live_data_untouched (test_recovery.RecoveryTests.test_both_invalid_leave_live_data_untouched) ... ok
+test_checksum_catches_a_readable_but_modified_snapshot (test_recovery.RecoveryTests.test_checksum_catches_a_readable_but_modified_snapshot) ... ok
+test_concurrent_creations_publish_two_distinct_snapshots (test_recovery.RecoveryTests.test_concurrent_creations_publish_two_distinct_snapshots) ... ok
+test_corrupt_latest_recovers_ten_and_reports_gap (test_recovery.RecoveryTests.test_corrupt_latest_recovers_ten_and_reports_gap) ... ok
+test_failed_history_write_rolls_back_ticket_then_retry_succeeds (test_recovery.RecoveryTests.test_failed_history_write_rolls_back_ticket_then_retry_succeeds) ... ok
+test_failed_snapshot_does_not_prune_prior_generations (test_recovery.RecoveryTests.test_failed_snapshot_does_not_prune_prior_generations) ... ok
+test_latest_recovers_eleven_tickets_and_exact_histories (test_recovery.RecoveryTests.test_latest_recovers_eleven_tickets_and_exact_histories) ... ok
+test_missing_live_database_recovers_after_normal_startup (test_recovery.RecoveryTests.test_missing_live_database_recovers_after_normal_startup) ... ok
+test_only_active_it_can_create_or_restore (test_recovery.RecoveryTests.test_only_active_it_can_create_or_restore) ... ok
+test_operator_web_flow_checks_confirmation_and_restores (test_recovery.RecoveryTests.test_operator_web_flow_checks_confirmation_and_restores) ... ok
+test_retry_after_lost_acknowledgement_keeps_one_ticket_and_event (test_recovery.RecoveryTests.test_retry_after_lost_acknowledgement_keeps_one_ticket_and_event) ... ok
+test_rotation_keeps_last_valid_predecessor (test_recovery.RecoveryTests.test_rotation_keeps_last_valid_predecessor) ... ok
+test_third_checkpoint_prunes_oldest_and_spares_named_export (test_recovery.RecoveryTests.test_third_checkpoint_prunes_oldest_and_spares_named_export) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in 3.759s
+
+OK

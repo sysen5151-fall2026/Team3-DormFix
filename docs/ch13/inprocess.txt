@@ -1,0 +1,28 @@
+{
+  "mode": "injected HTTP model",
+  "volume": 35,
+  "example_suggestion": "electrical",
+  "committed": "plumbing",
+  "lifecycle": "Closed",
+  "timings": {
+    "draft": {
+      "n": 36,
+      "median_ms": 1.54,
+      "p95_ms": 31.73,
+      "max_ms": 33.44
+    },
+    "confirm": {
+      "n": 36,
+      "median_ms": 8.79,
+      "p95_ms": 98.83,
+      "max_ms": 106.91
+    },
+    "read": {
+      "n": 37,
+      "median_ms": 4.42,
+      "p95_ms": 66.11,
+      "max_ms": 66.4
+    }
+  }
+}
+Transport: in-process application and model HTTP handlers. No network or real weights in this check.

@@ -1,5 +1,7 @@
 # DormFix — integrated demonstration prototype
 
+**Chapter 13 grading build.** Use [CHAPTER13.md](CHAPTER13.md) for the pinned local model, database setup, resident-to-resolution demonstration and verification commands. The chapter evidence and native diagram exports are in [docs/ch13](docs/ch13/).
+
 **Cornell SYSEN 5151 / SYSEN 5930 · Team 3**
 
 DormFix is a role-based student-housing maintenance and collaboration prototype for **routine, non-emergency** maintenance. This build extends the original Chapter 2 walking skeleton into a locally runnable demonstration while preserving the project boundaries and explicitly separating implemented behavior from deferred validation work.
