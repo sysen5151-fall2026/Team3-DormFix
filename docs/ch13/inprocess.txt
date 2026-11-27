@@ -1,0 +1,30 @@
+{
+  "mode": "injected HTTP model",
+  "volume": 35,
+  "schema_valid_wrong_category_contained": true,
+  "additional_access_and_authority_fields_contained": true,
+  "example_suggestion": "electrical",
+  "committed": "plumbing",
+  "lifecycle": "Closed",
+  "timings": {
+    "draft": {
+      "n": 36,
+      "median_ms": 1.7,
+      "p95_ms": 31.1,
+      "max_ms": 32.21
+    },
+    "confirm": {
+      "n": 36,
+      "median_ms": 6.46,
+      "p95_ms": 75.49,
+      "max_ms": 77.58
+    },
+    "read": {
+      "n": 37,
+      "median_ms": 4.26,
+      "p95_ms": 50.23,
+      "max_ms": 50.96
+    }
+  }
+}
+Transport: in-process application and model HTTP handlers. No network or real weights in this check.

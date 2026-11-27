@@ -1,0 +1,31 @@
+name: DormFix Chapter 13 integration
+on:
+  push:
+    branches: [task7/implementation-integration]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  clean-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.12'
+      - name: Verify Python and SQLite
+        run: python -c "import sys, sqlite3; print(sys.version, sqlite3.sqlite_version)"
+      - name: Run service and recovery regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Exercise all interfaces and fault containment
+        run: python verify_ch13.py
+      - name: Install LM Studio headless runtime
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --location https://lmstudio.ai/install.sh -o "$RUNNER_TEMP/lmstudio-install.sh"
+          bash "$RUNNER_TEMP/lmstudio-install.sh" --no-modify-path
+      - name: Load the original Llama 3.1 8B Instruct and check real responses
+        run: |
+          python -u scripts/start_model.py --cpu
+          python -u verify_ch13.py --live
